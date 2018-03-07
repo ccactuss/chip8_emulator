@@ -6,6 +6,7 @@
 #include <time.h>
 #include <cmath>
 #include <iomanip>
+#include <stdint.h>
 
 
 #define MEM_SIZE 4096
@@ -18,42 +19,41 @@
 class Chip
 {
 	private:
-		unsigned short _opcode;
-		unsigned char _mem[MEM_SIZE]; //memory table
-		unsigned short _V[REG_SIZE]; //registers
+		uint8_t _mem[MEM_SIZE]; //memory table
+		uint8_t _V[REG_SIZE]; //registers
 
-		unsigned short _I; //index register
-		unsigned short _pc; //program-counter
+		uint16_t _I; //index register
+		uint16_t _pc; //program-counter
+		uint16_t _opcode;
 
-		unsigned char _delayTimer;
-		unsigned char _soundTimer;
+		uint8_t _delayTimer;
+		uint8_t _soundTimer;
 
-		unsigned short _stack[STACK_SIZE];
-		unsigned short _sp;
+		uint16_t _stack[STACK_SIZE];
+		uint16_t _sp;
 
-		void clearScreen();
+		void clearScreen(bool changeDF = true);
 		void clearStack();
 		void clearRegisters();
 		void clearMem();
+		void clearKeys();
 
-
-		void call(unsigned short where);
+		void call(uint16_t where);
 		void ret();
-		void jmp(unsigned short where);
+		void jmp(uint16_t where);
 
-		void renderSprite(unsigned short x , unsigned short y , unsigned short height);
+		void renderSprite(uint8_t x , uint8_t y , uint8_t height);
 
 
-		unsigned short getNumFromOpcode(int index);
-		unsigned int getNumFromOpcode(int index , int len);
+		uint8_t getNumFromOpcode(int index);
+		uint16_t getNumFromOpcode(int index , int len);
 
 	public:
 
-		unsigned char _gfx[64*32]; //graphics table
-		unsigned char _key[KEY_SIZE];
+		uint8_t _gfx[64*32]; //graphics table
+		uint8_t _key[KEY_SIZE];
 		bool _drawFlag;
 
-		int count;
 
 		Chip();
 		~Chip();
@@ -64,6 +64,7 @@ class Chip
 		bool loadFile(const char* path);
 
 		void setKeys();
+		int getKey();
 
 };
 

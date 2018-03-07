@@ -109,8 +109,8 @@ int main(int argc, char **argv)
                 for (int i = 0; i < 16; ++i) {
                     if (e.key.keysym.sym == keymap[i]) {
                         chip8._key[i] = 1;
-                    }
                 }
+              }
             }
             // Process keyup events
             if (e.type == SDL_KEYUP) {
@@ -140,7 +140,7 @@ int main(int argc, char **argv)
         }
 
         // Sleep to slow down emulation speed
-        std::this_thread::sleep_for(std::chrono::microseconds(1200));
+        std::this_thread::sleep_for(std::chrono::microseconds(2000));
 
     }
 

@@ -28,6 +28,9 @@ Chip::Chip()
 	this->_opcode = 0;
 	this->_I = 0;
 	this->_sp = 0;
+
+  this->_delayTimer = 0;
+  this->_soundTimer = 0;
 }
 
 
@@ -39,18 +42,19 @@ Chip::~Chip(){}
 */
 void Chip::init()
 {
-	this->clearScreen();
+	this->clearScreen(false);
 	this->clearStack();
 	this->clearRegisters();
 	this->clearMem();
-
+  this->clearKeys();
 
 	//set fontset
-	for (int i = 0; i < 80; i++)
+	for (int i = 0; i < 80; ++i)
 	{
 		this->_mem[i] = chip8_fontset[i];
 	}
 
+  srand(time(NULL));
 }
 
 
@@ -106,8 +110,6 @@ void Chip::emulateCycle()
 {
 	this->_opcode = this->_mem[this->_pc] << 8 | this->_mem[this->_pc + 1];
 
-  std::cout << "Opcode = " << std::hex << this->_opcode << std::endl;
-  //std::cin.get();
 
 	switch(this->_opcode & 0xF000)
 	{
@@ -139,12 +141,6 @@ void Chip::emulateCycle()
 
 
 		case 0x3000: //if Vx == NN jmp to next instrucion (0x3XNN)
-
-      std::cout << "\tthis->_V[" << std::hex << getNumFromOpcode(1) << "] = " << std::hex << _V[getNumFromOpcode(1)] << std::endl;
-      std::cout << "\tgetNumFromOpcode(2,2) = " << std::hex << getNumFromOpcode(2,2) << std::endl;
-      std::cout << (this->_V[getNumFromOpcode(1)] == getNumFromOpcode(2 , 2)) << std::endl;
-      //std::cin.get();
-
 			if (this->_V[getNumFromOpcode(1)] == getNumFromOpcode(2 , 2))
 			{
 				this->_pc += 4;
@@ -153,7 +149,6 @@ void Chip::emulateCycle()
 
 			this->_pc += 2;
 			break;
-
 
 
 		case 0x4000: //if Vx != NN jmp to next instrucion (0x4XNN)
@@ -180,7 +175,7 @@ void Chip::emulateCycle()
 
 
 		case 0x6000: //Sets: Vx = NN (0x6XNN)
-			this->_V[this->getNumFromOpcode(1)] = this->getNumFromOpcode(2 , 2);
+			this->_V[getNumFromOpcode(1)] = getNumFromOpcode(2 , 2);
       this->_pc += 2;
 			break;
 
@@ -214,15 +209,14 @@ void Chip::emulateCycle()
           this->_pc += 2;
 					break;
 
-          case 0x0004: //Sets: Vx += Vy (0x8XY4)
+        case 0x0004: //Sets: Vx += Vy (0x8XY4)
           this->_V[getNumFromOpcode(1)] += this->_V[getNumFromOpcode(2)];
           this->_V[0xF] = this->_V[getNumFromOpcode(2)] > (0xFF - this->_V[getNumFromOpcode(1)]) ? 1 : 0; //TODO check this statement
           this->_pc += 2;
 					break;
 
 				case 0x0005: //Sets Vx -= Vy (0x8XY5)
-
-          this->_V[0xF] = this->_V[getNumFromOpcode(2)] > this->_V[getNumFromOpcode(1)] ? 0 : 1; //TODO know what borrow is
+          this->_V[0xF] = this->_V[getNumFromOpcode(2)] > this->_V[getNumFromOpcode(1)] ? 0 : 1;
 
 					this->_V[getNumFromOpcode(1)] -= this->_V[getNumFromOpcode(2)];
           this->_pc += 2;
@@ -247,7 +241,7 @@ void Chip::emulateCycle()
 				case 0x000E: //Sets Vf = Vy &  0x1000 (carry flag); Vy = Vy << 1; Sets Vx = Vy (0x8XYE)
           this->_V[0xF] = this->_V[getNumFromOpcode(1)] >> 7;
           this->_V[getNumFromOpcode(1)] <<= 1;
-          //this->_V[getNumFromOpcode(1)] = this->_V[getNumFromOpcode(2)];
+          this->_V[getNumFromOpcode(1)] = this->_V[getNumFromOpcode(2)];
           this->_pc += 2;
 					break;
 
@@ -272,7 +266,7 @@ void Chip::emulateCycle()
 
 
 		case 0xA000: //set I (0xANNN)
-			this->_I = this->_opcode & 0x0FFF;
+			this->_I = getNumFromOpcode(1 , 3);
 			this->_pc += 2;
 			break;
 
@@ -282,14 +276,13 @@ void Chip::emulateCycle()
 			break;
 
 		case 0xC000: //Sets Vx = random() & NN (0xCXNN)
-			srand(time(NULL));
-			this->_V[this->getNumFromOpcode(1)] = ((rand() % (0xFF + 1)) & this->getNumFromOpcode(2 , 2));
+			this->_V[getNumFromOpcode(1)] = ((rand() % (0xFF + 1)) & getNumFromOpcode(2 , 2));
       this->_pc += 2;
 			break;
 
 
 		case 0xD000: //Renders a sprite at (Vx,Vy) with with of 8px and height of Npx (0xDXYN)
-      this->renderSprite(getNumFromOpcode(1) , getNumFromOpcode(2) , getNumFromOpcode(3));
+      this->renderSprite(this->_V[getNumFromOpcode(1)] , this->_V[getNumFromOpcode(2)] , getNumFromOpcode(3));
       this->_pc += 2;
 			break;
 
@@ -335,8 +328,18 @@ void Chip::emulateCycle()
 					break;
 
 				case 0x000A: //Sets: Vx = getKeypress; (0xFX0A)
-          this->_pc += 2;
-					break;
+        {
+          int pressedKey = this->getKey();
+
+          if (pressedKey != -1)
+          {
+            this->_V[getNumFromOpcode(1)] = pressedKey;
+            this->_pc += 2;
+          }
+          else return;
+
+        }
+          break;
 
 				case 0x0015: //Sets: delayTimer = Vx (0xFX15)
           this->_delayTimer = this->_V[getNumFromOpcode(1)];
@@ -348,8 +351,9 @@ void Chip::emulateCycle()
           this->_pc += 2;
 					break;
 
-				case 0x001E: //Sets: I += Vx (0xFX1E)
-          if (this->_I + this->_V[getNumFromOpcode(1)] > 0xFFF ? this->_V[0xF] = 1 : this->_V[0xF] = 0);
+          case 0x001E: //Sets: I += Vx (0xFX1E)
+          this->_V[0xF] = (this->_I + this->_V[getNumFromOpcode(1)]) > 0xFFF ? 1 : 0; //0xFFF
+
           this->_I += this->_V[getNumFromOpcode(1)];
           this->_pc += 2;
 					break;
@@ -415,14 +419,17 @@ void Chip::emulateCycle()
 
 
 /////////Utils//////////
-void Chip::clearScreen()
+void Chip::clearScreen(bool changeDF)
 {
 	for (int i = 0; i < PIXELS; i++)
 	{
 		this->_gfx[i] = 0;
 	}
 
-  this->_drawFlag = true;
+  if (changeDF)
+  {
+    this->_drawFlag = true;
+  }
 }
 
 
@@ -444,6 +451,13 @@ void Chip::clearRegisters()
 	}
 }
 
+void Chip::clearKeys()
+{
+  for (int i = 0; i < KEY_SIZE; i++)
+  {
+    this->_key[i] = 0;
+  }
+}
 
 void Chip::clearMem()
 {
@@ -455,7 +469,7 @@ void Chip::clearMem()
 
 
 
-void Chip::call(unsigned short where)
+void Chip::call(uint16_t where)
 {
 	this->_stack[this->_sp] = this->_pc;
 	++this->_sp;
@@ -471,15 +485,13 @@ void Chip::ret()
 }
 
 
-void Chip::jmp(unsigned short where)
+void Chip::jmp(uint16_t where)
 {
-  std::cout << "'\tJumped to " << std::hex << this->_pc << std::endl;
   this->_pc = where;
-  //std::cin.get();
 }
 
 
-void Chip::renderSprite(unsigned short x , unsigned short y , unsigned short height)
+void Chip::renderSprite(uint8_t x , uint8_t y , uint8_t height)
 {
     unsigned short pix;
     this->_V[0xF] = 0; //resetting carry flag. it can be used as collision detector
@@ -519,9 +531,8 @@ void Chip::renderSprite(unsigned short x , unsigned short y , unsigned short hei
 
 			 ect...
 */
-unsigned short Chip::getNumFromOpcode(int index)
+uint8_t Chip::getNumFromOpcode(int index)
 {
-  int num = (this->_opcode & (0xF000 / (int)std::pow(0x10 , index))) >> (12 - index * 4);
 	return (this->_opcode & (0xF000 / (int)std::pow(0x10 , index))) >> (12 - index * 4);
 }
 
@@ -533,7 +544,7 @@ unsigned short Chip::getNumFromOpcode(int index)
   @param index the index in the hex number
   @param len the length of the number
 */
-unsigned int Chip::getNumFromOpcode(int index , int len)
+uint16_t Chip::getNumFromOpcode(int index , int len)
 {
   unsigned int num = 0;
 
@@ -545,9 +556,19 @@ unsigned int Chip::getNumFromOpcode(int index , int len)
       num += (this->getNumFromOpcode(i + index));
   }
 
-  //std::cout << "gnfOpcode(" << index << "," << len <<  "): " << std::hex << num << std::endl;
-  //std::cin.get();
-
+  //std::cout << "gnfOpcode(" << index << "," << len <<  "): " << std::hex << num
 
   return num;
+}
+
+
+
+int Chip::getKey()
+{
+  for (int i = 0; i < KEY_SIZE; i++)
+  {
+    if (this->_key[i]) return i;
+  }
+
+  return -1;
 }
