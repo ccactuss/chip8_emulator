@@ -110,6 +110,7 @@ void Chip::emulateCycle()
 {
 	this->_opcode = this->_mem[this->_pc] << 8 | this->_mem[this->_pc + 1];
 
+  std::cout << "Opcode: " << std::hex << unsigned(this->_opcode) << std::endl;
 
 	switch(this->_opcode & 0xF000)
 	{
@@ -302,7 +303,7 @@ void Chip::emulateCycle()
 					break;
 
 				case 0x00A1: //if Keypress != Vx jmp to next instrucion (0xEXA1)
-          if (!this->_key[this->_V[getNumFromOpcode(1)]])
+          if (this->_key[this->_V[getNumFromOpcode(1)]] == 0)
           {
             this->_pc += 4;
             break;
@@ -382,7 +383,7 @@ void Chip::emulateCycle()
 					break;
 
 				case 0x0065: //Sets: V0 to Vx with values from mem[I]
-          for (int i = 0; i < getNumFromOpcode(1); i++)
+          for (int i = 0; i <= getNumFromOpcode(1); i++)
           {
             this->_V[i] = this->_mem[i + this->_I];
           }
@@ -433,7 +434,6 @@ void Chip::clearScreen(bool changeDF)
 }
 
 
-
 void Chip::clearStack()
 {
 	for (int i = 0; i < STACK_SIZE; ++i)
@@ -451,6 +451,7 @@ void Chip::clearRegisters()
 	}
 }
 
+
 void Chip::clearKeys()
 {
   for (int i = 0; i < KEY_SIZE; i++)
@@ -459,6 +460,7 @@ void Chip::clearKeys()
   }
 }
 
+
 void Chip::clearMem()
 {
 	for (int i = 0; i < MEM_SIZE; ++i)
@@ -466,7 +468,6 @@ void Chip::clearMem()
 		this->_mem[i] = 0;
 	}
 }
-
 
 
 void Chip::call(uint16_t where)
@@ -478,7 +479,7 @@ void Chip::call(uint16_t where)
 }
 
 
-void Chip::ret()
+void Chip::ret()  
 {
 	--this->_sp;
 	this->_pc = this->_stack[this->_sp];
@@ -508,6 +509,7 @@ void Chip::renderSprite(uint8_t x , uint8_t y , uint8_t height)
           if (this->_gfx[x + xLine + ((y + yLine) * 64)] == 1)
           {
             this->_V[0xF] = 1;
+            std::cin.get();
           }
 
           this->_gfx[x + xLine + ((y + yLine) * 64)] ^= 1;
@@ -517,8 +519,8 @@ void Chip::renderSprite(uint8_t x , uint8_t y , uint8_t height)
     }
 
     this->_drawFlag = true;
-}
 
+}
 
 
 /*
@@ -537,7 +539,6 @@ uint8_t Chip::getNumFromOpcode(int index)
 }
 
 
-
 /*
   gets a number from the opcode according to length and index
 
@@ -548,7 +549,6 @@ uint16_t Chip::getNumFromOpcode(int index , int len)
 {
   unsigned int num = 0;
 
-//  std::cout << "gnfOpcode(" << index << "," << len <<  "): has been called" << std::endl;
 
   for (int i = 0; i < len; i++)
   {
@@ -556,11 +556,8 @@ uint16_t Chip::getNumFromOpcode(int index , int len)
       num += (this->getNumFromOpcode(i + index));
   }
 
-  //std::cout << "gnfOpcode(" << index << "," << len <<  "): " << std::hex << num
-
   return num;
 }
-
 
 
 int Chip::getKey()

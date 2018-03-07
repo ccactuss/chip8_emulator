@@ -57,7 +57,7 @@ int main(int argc, char **argv)
     }
     // Create window
     window = SDL_CreateWindow(
-            "CHIP-8 Emulator",
+            "Fucking lame emulator",
             SDL_WINDOWPOS_UNDEFINED, SDL_WINDOWPOS_UNDEFINED,
             w, h, SDL_WINDOW_SHOWN
     );
