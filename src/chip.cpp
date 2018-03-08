@@ -267,9 +267,16 @@ void Chip::emulateCycle()
 					break;
 
 				case 0x0033: //Store dec(Vx), then mem[I] = hunderds(Vx), mem[I + 1] = tens(Vx), mem[I + 2] = digit(Vx) (0xFX33)
-          this->_mem[this->_I] = getNumFromOpcode(1) / 100;
-          this->_mem[this->_I + 1] = (getNumFromOpcode(1) / 10) % 10;
-          this->_mem[this->_I + 2] = (getNumFromOpcode(1) % 100) % 10;
+
+          //std::cout << "getNumFromOpcode(1) / 100" << std::hex << unsigned(getNumFromOpcode(1) / 100) << std::endl;
+          //std::cout << "getNumFromOpcode(1) / 100" << std::hex << unsigned(getNumFromOpcode(1) / 100) << std::endl;
+          //std::cout << "getNumFromOpcode(1) / 100" << std::hex << unsigned(getNumFromOpcode(1) / 100) << std::endl;
+
+          //std::cin.get();
+
+          this->_mem[this->_I] = this->_V[getNumFromOpcode(1)] / 100;
+          this->_mem[this->_I + 1] = (this->_V[getNumFromOpcode(1)] / 10) % 10;
+          this->_mem[this->_I + 2] = (this->_V[getNumFromOpcode(1)] % 100) % 10;
 
           this->_pc += 2;
 					break;
@@ -520,7 +527,7 @@ void Chip::renderSprite(uint8_t x , uint8_t y , uint8_t height)
     }
 
     this->_drawFlag = true;
-
+    //std::cin.get();
 }
 
 
