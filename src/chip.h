@@ -48,17 +48,17 @@ class Chip
 		uint8_t getNumFromOpcode(int index);
 		uint16_t getNumFromOpcode(int index , int len);
 
+		void parseKeyEvent();
+		void parseRegManipulation();
+
 	public:
 
 		uint8_t _gfx[64*32]; //graphics table
 		uint8_t _key[KEY_SIZE];
 		bool _drawFlag;
 
-
 		Chip();
-		~Chip();
 
-		void init();
 		void emulateCycle();
 
 		bool loadFile(const char* path);

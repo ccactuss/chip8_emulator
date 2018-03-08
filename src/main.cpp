@@ -34,7 +34,6 @@ uint8_t keymap[16] = {
 int main(int argc, char **argv)
 {
 
-
     // Command usage
     if (argc != 2) {
         cout << "Usage: chip8 <ROM file>" << endl;
@@ -70,7 +69,7 @@ int main(int argc, char **argv)
     }
 
     // Create renderer
-    SDL_Renderer *renderer = SDL_CreateRenderer(window, -1, 0);
+    SDL_Renderer* renderer = SDL_CreateRenderer(window, -1, 0);
     SDL_RenderSetLogicalSize(renderer, w, h);
 
     // Create texture that stores frame buffer
@@ -98,24 +97,30 @@ int main(int argc, char **argv)
             if (e.type == SDL_QUIT) exit(0);
 
             // Process keydown events
-            if (e.type == SDL_KEYDOWN) {
+            if (e.type == SDL_KEYDOWN)
+            {
                 if (e.key.keysym.sym == SDLK_ESCAPE)
                     exit(0);
 
                 if (e.key.keysym.sym == SDLK_F1)
-                    goto load;      // *gasp*, a goto statement!
-                                    // Used to reset/reload ROM
+                    goto load;
 
-                for (int i = 0; i < 16; ++i) {
-                    if (e.key.keysym.sym == keymap[i]) {
+                for (int i = 0; i < 16; ++i)
+                {
+                    if (e.key.keysym.sym == keymap[i])
+                    {
                         chip8._key[i] = 1;
+                    }
                 }
-              }
             }
+
             // Process keyup events
-            if (e.type == SDL_KEYUP) {
-                for (int i = 0; i < 16; ++i) {
-                    if (e.key.keysym.sym == keymap[i]) {
+            if (e.type == SDL_KEYUP)
+            {
+                for (int i = 0; i < 16; ++i)
+                {
+                    if (e.key.keysym.sym == keymap[i])
+                    {
                         chip8._key[i] = 0;
                     }
                 }
@@ -123,11 +128,13 @@ int main(int argc, char **argv)
         }
 
         // If draw occurred, redraw SDL screen
-        if (chip8._drawFlag) {
+        if (chip8._drawFlag)
+        {
             chip8._drawFlag = false;
 
             // Store pixels in temporary buffer
-            for (int i = 0; i < 2048; ++i) {
+            for (int i = 0; i < 2048; ++i)
+            {
                 uint8_t pixel = chip8._gfx[i];
                 pixels[i] = (0x00FFFFFF * pixel) | 0xFF000000;
             }

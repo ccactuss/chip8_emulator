@@ -31,31 +31,24 @@ Chip::Chip()
 
   this->_delayTimer = 0;
   this->_soundTimer = 0;
-}
 
 
-Chip::~Chip(){}
-
-
-/*
-	Initializes and clears the system whole memory, sets fontset
-*/
-void Chip::init()
-{
-	this->clearScreen(false);
-	this->clearStack();
-	this->clearRegisters();
-	this->clearMem();
+  this->clearScreen(false);
+  this->clearStack();
+  this->clearRegisters();
+  this->clearMem();
   this->clearKeys();
 
-	//set fontset
-	for (int i = 0; i < 80; ++i)
-	{
-		this->_mem[i] = chip8_fontset[i];
-	}
+  //set fontset
+  for (int i = 0; i < 80; ++i)
+  {
+    this->_mem[i] = chip8_fontset[i];
+  }
 
   srand(time(NULL));
 }
+
+
 
 
 bool Chip::loadFile(const char* path)
@@ -187,71 +180,7 @@ void Chip::emulateCycle()
 
 
 		case 0x8000:
-
-			switch(this->_opcode & 0x000F)
-			{
-				case 0x0000: //sets: Vx = Vy (0x8XY0)
-					this->_V[this->getNumFromOpcode(1)] = this->_V[getNumFromOpcode(2)];
-          this->_pc += 2;
-					break;
-
-				case 0x0001: //Sets: Vx = Vx | Vy (0x8XY1)
-					this->_V[this->getNumFromOpcode(1)] |= this->_V[getNumFromOpcode(2)];
-          this->_pc += 2;
-					break;
-
-				case 0x0002: //Sets Vx = Vx & Vy (0x8XY2)
-					this->_V[this->getNumFromOpcode(1)] &= this->_V[getNumFromOpcode(2)];
-          this->_pc += 2;
-					break;
-
-				case 0x0003: //Sets Vx = Vx ^ Vy (0x8XY3)
-					this->_V[getNumFromOpcode(1)] ^= this->_V[getNumFromOpcode(2)];
-          this->_pc += 2;
-					break;
-
-        case 0x0004: //Sets: Vx += Vy (0x8XY4)
-          this->_V[getNumFromOpcode(1)] += this->_V[getNumFromOpcode(2)];
-          this->_V[0xF] = this->_V[getNumFromOpcode(2)] > (0xFF - this->_V[getNumFromOpcode(1)]) ? 1 : 0; //TODO check this statement
-          this->_pc += 2;
-					break;
-
-				case 0x0005: //Sets Vx -= Vy (0x8XY5)
-          this->_V[0xF] = this->_V[getNumFromOpcode(2)] > this->_V[getNumFromOpcode(1)] ? 0 : 1;
-
-					this->_V[getNumFromOpcode(1)] -= this->_V[getNumFromOpcode(2)];
-          this->_pc += 2;
-					break;
-
-				case 0x0006: //Sets Vf = Vy &  0x0001 (carry flag); Vy = Vy >> 1; Sets Vx = Vy (0x8XY6)
-          this->_V[0xF] = this->_V[getNumFromOpcode(2)] & 0x0001;
-          this->_V[getNumFromOpcode(2)] >>= 1;
-          //this->_V[getNumFromOpcode(1)] = this->_V[getNumFromOpcode(2)];
-
-          this->_pc += 2;
-          break;
-
-				case 0x0007: //Sets: Vx = Vy - Vx (0x8XY7)
-
-          this->_V[0xF] = this->_V[getNumFromOpcode(1)] > this->_V[getNumFromOpcode(2)] ? 0 : 1;
-
-					this->_V[this->getNumFromOpcode(1)] = this->_V[getNumFromOpcode(2)] - this->_V[getNumFromOpcode(1)];
-          this->_pc += 2;
-					break;
-
-				case 0x000E: //Sets Vf = Vy &  0x1000 (carry flag); Vy = Vy << 1; Sets Vx = Vy (0x8XYE)
-          this->_V[0xF] = this->_V[getNumFromOpcode(1)] >> 7;
-          this->_V[getNumFromOpcode(1)] <<= 1;
-          this->_V[getNumFromOpcode(1)] = this->_V[getNumFromOpcode(2)];
-          this->_pc += 2;
-					break;
-
-				default:
-          std::cerr << "Unknown opcode: " << std::hex << this->_opcode << std::endl;
-          exit(3);
-					break;
-			}
-
+      this->parseRegManipulation();
 			break;
 
 
@@ -289,35 +218,8 @@ void Chip::emulateCycle()
 
 
 		case 0xE000: //Keypress event
-
-			switch(this->_opcode & 0x00FF)
-			{
-				case 0x009E: //if Keypress == Vx jmp to next instrucion (0xEX9E)
-          if (this->_key[this->_V[getNumFromOpcode(1)]] != 0)
-          {
-            this->_pc += 4;
-            break;
-          }
-
-          this->_pc += 2;
-					break;
-
-				case 0x00A1: //if Keypress != Vx jmp to next instrucion (0xEXA1)
-          if (this->_key[this->_V[getNumFromOpcode(1)]] == 0)
-          {
-            this->_pc += 4;
-            break;
-          }
-
-          this->_pc += 2;
-          break;
-
-				default:
-					break;
-			}
-
+      this->parseKeyEvent();
 			break;
-
 
 		case 0xF000:
 
@@ -393,7 +295,9 @@ void Chip::emulateCycle()
 					break;
 
 				default:
-					break;
+          std::cerr << "Unknown opcode: " << std::hex << this->_opcode << std::endl;
+          exit(3);
+          break;
 			}
 
 			break;
@@ -412,11 +316,109 @@ void Chip::emulateCycle()
 
     if (this->_soundTimer > 0)
         if(this->_soundTimer == 1);
-            //std::cout << "BEEP!" << std::endl;
+            //std::cout << "\a" << std::endl;
         --this->_soundTimer;
 
 }
 
+
+
+void Chip::parseKeyEvent()
+{
+  switch(this->_opcode & 0x00FF)
+  {
+    case 0x009E: //if Keypress == Vx jmp to next instrucion (0xEX9E)
+      if (this->_key[this->_V[getNumFromOpcode(1)]] != 0)
+      {
+        this->_pc += 4;
+        break;
+      }
+
+      this->_pc += 2;
+      break;
+
+    case 0x00A1: //if Keypress != Vx jmp to next instrucion (0xEXA1)
+      if (this->_key[this->_V[getNumFromOpcode(1)]] == 0)
+      {
+        this->_pc += 4;
+        break;
+      }
+
+      this->_pc += 2;
+      break;
+
+    default:
+      break;
+  }
+}
+
+
+void Chip::parseRegManipulation()
+{
+  switch(this->_opcode & 0x000F)
+  {
+  	case 0x0000: //sets: Vx = Vy (0x8XY0)
+  		this->_V[this->getNumFromOpcode(1)] = this->_V[getNumFromOpcode(2)];
+      this->_pc += 2;
+  		break;
+
+  	case 0x0001: //Sets: Vx = Vx | Vy (0x8XY1)
+  		this->_V[this->getNumFromOpcode(1)] |= this->_V[getNumFromOpcode(2)];
+      this->_pc += 2;
+  		break;
+
+  	case 0x0002: //Sets Vx = Vx & Vy (0x8XY2)
+  		this->_V[this->getNumFromOpcode(1)] &= this->_V[getNumFromOpcode(2)];
+      this->_pc += 2;
+  		break;
+
+  	case 0x0003: //Sets Vx = Vx ^ Vy (0x8XY3)
+  		this->_V[getNumFromOpcode(1)] ^= this->_V[getNumFromOpcode(2)];
+      this->_pc += 2;
+  		break;
+
+    case 0x0004: //Sets: Vx += Vy (0x8XY4)
+      this->_V[getNumFromOpcode(1)] += this->_V[getNumFromOpcode(2)];
+      this->_V[0xF] = this->_V[getNumFromOpcode(2)] > (0xFF - this->_V[getNumFromOpcode(1)]) ? 1 : 0; //TODO check this statement
+      this->_pc += 2;
+  		break;
+
+  	case 0x0005: //Sets Vx -= Vy (0x8XY5)
+      this->_V[0xF] = this->_V[getNumFromOpcode(2)] > this->_V[getNumFromOpcode(1)] ? 0 : 1;
+
+  		this->_V[getNumFromOpcode(1)] -= this->_V[getNumFromOpcode(2)];
+      this->_pc += 2;
+  		break;
+
+  	case 0x0006: //Sets Vf = Vy &  0x0001 (carry flag); Vy = Vy >> 1; Sets Vx = Vy (0x8XY6)
+      this->_V[0xF] = this->_V[getNumFromOpcode(2)] & 0x0001;
+      this->_V[getNumFromOpcode(2)] >>= 1;
+      //this->_V[getNumFromOpcode(1)] = this->_V[getNumFromOpcode(2)];
+
+      this->_pc += 2;
+      break;
+
+  	case 0x0007: //Sets: Vx = Vy - Vx (0x8XY7)
+
+      this->_V[0xF] = this->_V[getNumFromOpcode(1)] > this->_V[getNumFromOpcode(2)] ? 0 : 1;
+
+  		this->_V[this->getNumFromOpcode(1)] = this->_V[getNumFromOpcode(2)] - this->_V[getNumFromOpcode(1)];
+      this->_pc += 2;
+  		break;
+
+  	case 0x000E: //Sets Vf = Vy &  0x1000 (carry flag); Vy = Vy << 1; Sets Vx = Vy (0x8XYE)
+      this->_V[0xF] = this->_V[getNumFromOpcode(1)] >> 7;
+      this->_V[getNumFromOpcode(1)] <<= 1;
+      this->_V[getNumFromOpcode(1)] = this->_V[getNumFromOpcode(2)];
+      this->_pc += 2;
+  		break;
+
+  	default:
+      std::cerr << "Unknown opcode: " << std::hex << this->_opcode << std::endl;
+      exit(3);
+  		break;
+    }
+}
 
 
 /////////Utils//////////
@@ -479,7 +481,7 @@ void Chip::call(uint16_t where)
 }
 
 
-void Chip::ret()  
+void Chip::ret()
 {
 	--this->_sp;
 	this->_pc = this->_stack[this->_sp];
@@ -509,7 +511,6 @@ void Chip::renderSprite(uint8_t x , uint8_t y , uint8_t height)
           if (this->_gfx[x + xLine + ((y + yLine) * 64)] == 1)
           {
             this->_V[0xF] = 1;
-            std::cin.get();
           }
 
           this->_gfx[x + xLine + ((y + yLine) * 64)] ^= 1;
